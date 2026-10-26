@@ -49,8 +49,8 @@ def silver_tables(spark, lakehouse):
     )
     spark.sql(
         "INSERT INTO silver.orders VALUES ('ORD-1', 'CUS-000001', timestamp'2024-01-01 10:00:00', "
-        "date'2024-01-01', 'placed', 'USD', timestamp'2024-01-01 10:00:00', 'b0', "
-        "current_timestamp())"
+        "date'2024-01-01', 'placed', 'USD', timestamp'2024-01-01 10:00:00', NULL, NULL, "
+        "'b0', current_timestamp())"
     )
 
 
