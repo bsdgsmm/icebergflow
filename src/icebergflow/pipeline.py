@@ -12,8 +12,9 @@ from datetime import date, datetime
 from typing import TYPE_CHECKING
 
 from icebergflow.ingestion.bronze import IngestionResult, ingest
+from icebergflow.lakehouse.catalog import table_exists
 from icebergflow.quality.suite import CheckResult, run_suite
-from icebergflow.transformations.gold import GoldResult, run_gold
+from icebergflow.transformations.gold import MODELS, GoldResult, run_gold
 from icebergflow.transformations.silver import SilverResult, run_silver
 
 if TYPE_CHECKING:
@@ -60,9 +61,16 @@ def run_pipeline(
     quality = run_suite(spark, "silver") if quality_checks else []
 
     months = None if full_refresh else affected_months(spark, started_at)
-    gold = run_gold(spark, settings.sql_dir, months=months)
-    if quality_checks:
-        quality += run_suite(spark, "gold")
+    silver_changed = any(r.merged_rows for r in silver)
+    gold_published = all(table_exists(spark, m.table) for m in MODELS)
+    if full_refresh or silver_changed or not gold_published:
+        gold = run_gold(spark, settings.sql_dir, months=months)
+        if quality_checks:
+            quality += run_suite(spark, "gold")
+    else:
+        # Gold is a pure function of Silver; with no Silver changes it is already current.
+        gold = []
+        logger.info("silver unchanged, gold is up to date")
 
     logger.info(
         "pipeline finished",
