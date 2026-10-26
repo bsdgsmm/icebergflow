@@ -110,6 +110,19 @@ def _cmd_run(args: argparse.Namespace, settings: Settings) -> int:
     return 0
 
 
+def _cmd_evolve_partition(args: argparse.Namespace, settings: Settings) -> int:
+    from icebergflow.lakehouse.catalog import add_partition_field, partition_fields
+    from icebergflow.lakehouse.spark import create_spark_session
+
+    spark = create_spark_session(settings, "icebergflow-maintenance")
+    changed = add_partition_field(spark, args.table, args.transform)
+    logger.info(
+        "partition spec evolved" if changed else "partition field already present",
+        extra={"table": args.table, "spec": ",".join(partition_fields(spark, args.table))},
+    )
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="icebergflow", description=__doc__)
     commands = parser.add_subparsers(dest="command", required=True)
@@ -154,6 +167,13 @@ def build_parser() -> argparse.ArgumentParser:
         "--full-refresh", action="store_true", help="reprocess all of Bronze and rebuild Gold"
     )
     run.set_defaults(handler=_cmd_run)
+
+    evolve = commands.add_parser(
+        "evolve-partition", help="add a partition field to a table (metadata-only change)"
+    )
+    evolve.add_argument("table", help="table identifier, e.g. silver.order_items")
+    evolve.add_argument("transform", help="partition transform, e.g. 'bucket(8, order_id)'")
+    evolve.set_defaults(handler=_cmd_evolve_partition)
 
     snaps = commands.add_parser("snapshots", help="show the snapshot history of a table")
     snaps.add_argument("table", help="table identifier, e.g. silver.orders")
