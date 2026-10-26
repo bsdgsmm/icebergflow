@@ -1,6 +1,6 @@
 PYTHON ?= python
 
-.PHONY: install setup lint format test test-unit test-integration generate sample-data ingest silver gold run full-refresh benchmark
+.PHONY: install setup lint format test test-unit test-integration generate sample-data ingest silver gold run full-refresh benchmark docker-build docker-run docker-test
 
 install:
 	$(PYTHON) -m pip install -e ".[dev]"
@@ -49,3 +49,13 @@ full-refresh:
 benchmark:
 	$(PYTHON) benchmarks/run_benchmarks.py
 	$(PYTHON) benchmarks/report.py --chart docs/screenshots/benchmark_layout.png
+
+docker-build:
+	docker compose build
+
+docker-run:
+	docker compose run --rm icebergflow generate
+	docker compose run --rm icebergflow run
+
+docker-test:
+	docker compose run --rm tests
