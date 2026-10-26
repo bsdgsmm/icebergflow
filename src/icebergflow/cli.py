@@ -106,8 +106,28 @@ def _cmd_run(args: argparse.Namespace, settings: Settings) -> int:
     from icebergflow.pipeline import run_pipeline
 
     spark = create_spark_session(settings, "icebergflow-run")
-    run_pipeline(spark, settings, args.batch or None, full_refresh=args.full_refresh)
+    run_pipeline(
+        spark,
+        settings,
+        args.batch or None,
+        full_refresh=args.full_refresh,
+        quality_checks=not args.skip_quality,
+    )
     return 0
+
+
+def _cmd_quality(args: argparse.Namespace, settings: Settings) -> int:
+    from icebergflow.lakehouse.spark import create_spark_session
+    from icebergflow.quality.suite import ERROR, run_suite
+
+    spark = create_spark_session(settings, "icebergflow-quality")
+    suites = ["silver", "gold"] if args.suite == "all" else [args.suite]
+    results = [r for suite in suites for r in run_suite(spark, suite, fail_on_error=False)]
+    spark.createDataFrame(
+        [(r.check, r.severity, r.failures, r.passed) for r in results],
+        "check string, severity string, failures bigint, passed boolean",
+    ).show(len(results), truncate=False)
+    return 1 if any(not r.passed and r.severity == ERROR for r in results) else 0
 
 
 def _cmd_evolve_partition(args: argparse.Namespace, settings: Settings) -> int:
@@ -166,7 +186,14 @@ def build_parser() -> argparse.ArgumentParser:
     run.add_argument(
         "--full-refresh", action="store_true", help="reprocess all of Bronze and rebuild Gold"
     )
+    run.add_argument(
+        "--skip-quality", action="store_true", help="do not run the data quality suites"
+    )
     run.set_defaults(handler=_cmd_run)
+
+    quality = commands.add_parser("quality", help="run data quality checks and show results")
+    quality.add_argument("--suite", choices=["silver", "gold", "all"], default="all")
+    quality.set_defaults(handler=_cmd_quality)
 
     evolve = commands.add_parser(
         "evolve-partition", help="add a partition field to a table (metadata-only change)"
