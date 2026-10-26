@@ -1,0 +1,25 @@
+product_id,product_name,category,brand,unit_price,is_active,updated_at
+PRD-0006,Northwind Board Game,Toys & Games,Northwind,86.49,true,2024-01-01T00:23:13Z
+PRD-0012,Northwind Trail Backpack,Sports & Outdoors,Northwind,122.64,true,2024-01-01T00:25:56Z
+PRD-0004,Adventure Works Yoga Mat,Sports & Outdoors,Adventure Works,82.96,true,2024-01-01T00:48:52Z
+PRD-0009,Adventure Works Wireless Earbuds,Electronics,Adventure Works,242.82,true,2024-01-01T00:25:50Z
+PRD-0013,Litware Sunscreen SPF50,Beauty,Litware,19.66,true,2024-01-01T00:24:15Z
+PRD-0014,Fabrikam Puzzle 1000pc,Toys & Games,Fabrikam,76.61,true,2024-01-01T00:11:40Z
+PRD-0024,Litware Dark Chocolate,Grocery,Litware,22.49,true,2024-01-01T00:26:16Z
+PRD-0019,Fabrikam SQL Cookbook,Books,Fabrikam,38.81,true,2024-01-01T00:27:00Z
+PRD-0005,Adventure Works Lip Balm Set,Beauty,Adventure Works,24.52,true,2024-01-01T00:40:13Z
+PRD-0017,Northwind Bluetooth Speaker,Electronics,Northwind,208.01,true,2024-01-01T00:54:57Z
+PRD-0023,Northwind Running Shoes,Clothing,Northwind,130.83,true,2024-01-01T00:10:26Z
+PRD-0021,Adventure Works Hair Dryer,Beauty,Adventure Works,28.07,true,2024-01-01T00:39:54Z
+PRD-0002,Contoso Chef Knife,Home & Kitchen,Contoso,112.15,true,2024-01-01T00:37:13Z
+PRD-0007,Contoso Wool Socks,Clothing,Contoso,26.11,true,2024-01-01T00:25:56Z
+PRD-0022,Adventure Works RC Car,Toys & Games,Adventure Works,49.18,true,2024-01-01T00:09:26Z
+PRD-0010,Fabrikam Storage Set,Home & Kitchen,Fabrikam,143.05,true,2024-01-01T00:24:41Z
+PRD-0015,Contoso Rain Jacket,Clothing,Contoso,75.79,true,2024-01-01T00:18:25Z
+PRD-0003,Tailspin Data Engineering Handbook,Books,Tailspin,9.40,true,2024-01-01T00:14:55Z
+PRD-0008,Fabrikam Granola,Grocery,Fabrikam,12.20,true,2024-01-01T00:02:57Z
+PRD-0011,Litware Data Engineering Handbook,Books,Litware,10.15,true,2024-01-01T00:15:33Z
+PRD-0018,Fabrikam Chef Knife,Home & Kitchen,Fabrikam,43.23,true,2024-01-01T00:38:43Z
+PRD-0020,Litware Resistance Bands,Sports & Outdoors,Litware,28.57,true,2024-01-01T00:09:31Z
+PRD-0001,Litware Wireless Earbuds,Electronics,Litware,24.75,true,2024-01-01T00:18:46Z
+PRD-0016,Litware Granola,Grocery,Litware,10.81,true,2024-01-01T00:22:08Z

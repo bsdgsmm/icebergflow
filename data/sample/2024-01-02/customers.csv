@@ -1,0 +1,14 @@
+customer_id,first_name,last_name,email,country,signup_date,updated_at
+CUS-000064,Mateo,Nowak,mateo.nowak.64@example.com,DE,2024-01-02,2024-01-02T03:27:43Z
+CUS-000063,Zeynep,Kim,zeynep.kim.63@example.com,TR,2024-01-02,2024-01-02T08:19:09Z
+CUS-000067,Chloe,Yilmaz,chloe.yilmaz.67@example.com,FR,2024-01-02,2024-01-02T13:34:03Z
+CUS-000031,Ivan,Garcia,ivan.garcia.31_at_example.com,FR,2024-01-01,2024-01-02T09:39:42Z
+CUS-000062,Chloe,Yilmaz,chloe.yilmaz.62@example.com,FR,2024-01-02,2024-01-02T04:09:56Z
+CUS-000061,Diego,Brown,diego.brown.61@example.com,US,2024-01-02,2024-01-02T18:24:23Z
+CUS-000071,Zeynep,Muller,zeynep.muller.71@example.com,GB,2024-01-02,2024-01-02T08:09:52Z
+CUS-000065,Chloe,Dubois,chloe.dubois.65@example.com,GB,2024-01-02,2024-01-02T13:37:40Z
+CUS-000072,Hana,Sato,hana.sato.72@example.com,DE,2024-01-02,2024-01-02T10:08:32Z
+CUS-000066,Yuki,Kaya,yuki.kaya.66@example.com,US,2024-01-02,2024-01-02T03:06:28Z
+CUS-000068,Ivan,Garcia,ivan.garcia.68@example.com,TR,2024-01-02,2024-01-02T20:26:48Z
+CUS-000070,Sofia,Khan,sofia.khan.70@example.com,DE,2024-01-02,2024-01-02T21:02:28Z
+CUS-000069,Mateo,Yilmaz,mateo.yilmaz.69@example.com,DE,2024-01-02,2024-01-02T15:23:55Z
