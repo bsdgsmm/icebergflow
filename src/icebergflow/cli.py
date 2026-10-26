@@ -75,6 +75,22 @@ def _cmd_ingest(args: argparse.Namespace, settings: Settings) -> int:
     return 0
 
 
+def _cmd_silver(args: argparse.Namespace, settings: Settings) -> int:
+    from icebergflow.lakehouse.spark import create_spark_session
+    from icebergflow.transformations.silver import run_silver
+
+    spark = create_spark_session(settings, "icebergflow-silver")
+    results = run_silver(spark)
+    logger.info(
+        "silver processing finished",
+        extra={
+            "merged": sum(r.merged_rows for r in results),
+            "quarantined": sum(r.quarantined_rows for r in results),
+        },
+    )
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="icebergflow", description=__doc__)
     commands = parser.add_subparsers(dest="command", required=True)
@@ -102,6 +118,9 @@ def build_parser() -> argparse.ArgumentParser:
     ing = commands.add_parser("ingest", help="load raw source batches into Bronze tables")
     ing.add_argument("--batch", action="append", help="batch id to load (repeatable; default: all)")
     ing.set_defaults(handler=_cmd_ingest)
+
+    silver = commands.add_parser("silver", help="validate and merge Bronze data into Silver")
+    silver.set_defaults(handler=_cmd_silver)
 
     snaps = commands.add_parser("snapshots", help="show the snapshot history of a table")
     snaps.add_argument("table", help="table identifier, e.g. silver.orders")
