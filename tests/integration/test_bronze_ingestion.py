@@ -1,5 +1,4 @@
 import json
-from datetime import date
 
 import pytest
 
@@ -129,12 +128,11 @@ def test_malformed_json_lines_are_kept_as_corrupt_records(spark, raw):
     assert "ORD-BROKEN" in corrupt[0]._corrupt_record
 
 
-def test_unexpected_columns_are_rejected(spark, lakehouse):
-    generate(
-        GeneratorConfig(**{**CONFIG.__dict__, "days": 2, "schema_v2_from": date(2024, 1, 2)}),
-        lakehouse.raw_dir,
-    )
-    ingest(spark, lakehouse, ["2024-01-01"], ["orders"])
+def test_invalid_column_names_are_rejected(spark, raw):
+    path = raw.raw_dir / "2024-01-01" / "orders.jsonl"
+    lines = path.read_text().splitlines()
+    lines[0] = lines[0][:-1] + ', "Order Note": "fragile"}'
+    path.write_text("\n".join(lines) + "\n")
 
-    with pytest.raises(SchemaDriftError, match="channel, coupon_code"):
-        ingest(spark, lakehouse, ["2024-01-02"], ["orders"])
+    with pytest.raises(SchemaDriftError, match="Order Note"):
+        ingest(spark, raw, ["2024-01-01"], ["orders"])

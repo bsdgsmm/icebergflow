@@ -47,6 +47,7 @@ class GoldModel:
 MODELS: tuple[GoldModel, ...] = (
     GoldModel("daily_sales", ("order_date",), ("months(order_date)",), "order_date"),
     GoldModel("product_performance", ("product_id",)),
+    GoldModel("channel_daily", ("order_date", "channel"), ("months(order_date)",), "order_date"),
     GoldModel("category_monthly", ("order_month", "category")),
     GoldModel("customer_summary", ("customer_id",)),
     GoldModel("repeat_purchase_cohorts", ("cohort_month",)),

@@ -31,7 +31,12 @@ from typing import TYPE_CHECKING
 from pyspark.sql import Window
 from pyspark.sql import functions as F
 
-from icebergflow.lakehouse.catalog import appended_since, create_table, current_snapshot_id
+from icebergflow.lakehouse.catalog import (
+    add_missing_columns,
+    appended_since,
+    create_table,
+    current_snapshot_id,
+)
 from icebergflow.lakehouse.watermarks import get_watermark, set_watermark
 from icebergflow.transformations.silver_specs import (
     QUARANTINE_COLUMNS,
@@ -65,14 +70,21 @@ class SilverResult:
 
 
 def ensure_silver_tables(spark: SparkSession) -> None:
+    """Create Silver tables, or evolve existing ones to the schema declared in their spec."""
     for spec in SPECS.values():
-        create_table(
+        created = create_table(
             spark,
             spec.table,
             spec.columns,
             partitioned_by=spec.partitioned_by,
             properties={"icebergflow.layer": "silver"},
         )
+        if not created:
+            added = add_missing_columns(spark, spec.table, spec.schema)
+            if added:
+                logger.info(
+                    "evolved table schema", extra={"table": spec.table, "added": ",".join(added)}
+                )
     create_table(
         spark,
         QUARANTINE_TABLE,
@@ -83,6 +95,9 @@ def ensure_silver_tables(spark: SparkSession) -> None:
 
 
 def parse(bronze: DataFrame, spec: SilverSpec) -> DataFrame:
+    for column in spec.optional_source_columns:
+        if column not in bronze.columns:
+            bronze = bronze.withColumn(column, F.lit(None).cast("string"))
     source_columns = [c for c in bronze.columns if not c.startswith("_")]
     return bronze.select(
         *spec.parse(),

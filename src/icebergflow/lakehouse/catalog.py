@@ -109,3 +109,47 @@ def appended_since(spark: SparkSession, identifier: str, snapshot_id: int) -> bo
         return False
     later = lineage[ids.index(snapshot_id) + 1 :]
     return all(operation == "append" for _, operation in later)
+
+
+def add_missing_columns(
+    spark: SparkSession, identifier: str, columns: list[tuple[str, str]]
+) -> list[str]:
+    """Add declared columns missing from the table, each placed after its predecessor.
+
+    Iceberg column additions are metadata-only: existing data files are not
+    rewritten and read the new columns as NULL.
+    """
+    existing = set(spark.table(identifier).columns)
+    added = []
+    previous = None
+    for name, dtype in columns:
+        if name not in existing:
+            position = f" AFTER `{previous}`" if previous else " FIRST"
+            spark.sql(f"ALTER TABLE {identifier} ADD COLUMN `{name}` {dtype}{position}")
+            added.append(name)
+        previous = name
+    return added
+
+
+def partition_fields(spark: SparkSession, identifier: str) -> list[str]:
+    """Current partition spec as Spark transform expressions, e.g. ``['days(order_ts)']``."""
+    rows = spark.sql(f"DESCRIBE TABLE {identifier}").collect()
+    fields, in_section = [], False
+    for row in rows:
+        if row.col_name.strip() == "# Partitioning":
+            in_section = True
+            continue
+        if in_section:
+            if not row.col_name.startswith("Part "):
+                break
+            fields.append(row.data_type.strip())
+    return fields
+
+
+def add_partition_field(spark: SparkSession, identifier: str, transform: str) -> bool:
+    """Evolve the partition spec. Existing files keep their old spec; returns False if present."""
+    normalized = transform.replace(" ", "").lower()
+    if normalized in {f.replace(" ", "").lower() for f in partition_fields(spark, identifier)}:
+        return False
+    spark.sql(f"ALTER TABLE {identifier} ADD PARTITION FIELD {transform}")
+    return True

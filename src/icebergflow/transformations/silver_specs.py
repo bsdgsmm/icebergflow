@@ -7,6 +7,7 @@ rule can tell a missing value apart from one that failed to parse.
 
 from __future__ import annotations
 
+import re
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
@@ -18,6 +19,7 @@ if TYPE_CHECKING:
 
 TIMESTAMP_FORMAT = "yyyy-MM-dd'T'HH:mm:ssX"
 ORDER_STATUSES = ("placed", "shipped", "delivered", "cancelled", "returned")
+ORDER_CHANNELS = ("web", "mobile_app", "marketplace")
 EMAIL_PATTERN = r"^[^@\s]+@[^@\s]+\.[^@\s]+$"
 
 Rule = tuple["Column", str]
@@ -43,10 +45,19 @@ class SilverSpec:
     version_column: str | None = None
     partitioned_by: tuple[str, ...] = ()
     references: tuple[Reference, ...] = field(default_factory=tuple)
+    # Source columns introduced by a later source schema version. Batches that
+    # predate them are read with the column set to NULL.
+    optional_source_columns: tuple[str, ...] = ()
 
     @property
     def table(self) -> str:
         return f"silver.{self.entity}"
+
+    @property
+    def schema(self) -> list[tuple[str, str]]:
+        """(name, type) pairs of ``columns``; splits only on top-level commas."""
+        parts = re.split(r",(?![^()]*\))", self.columns)
+        return [(name, dtype) for name, dtype in (p.strip().split(None, 1) for p in parts)]
 
 
 def _raw(name: str) -> Column:
@@ -120,6 +131,8 @@ def _orders_parse() -> list[Column]:
         F.lower(F.col("status")).alias("status"),
         F.upper(F.col("currency")).alias("currency"),
         _ts("updated_at").alias("updated_at"),
+        F.lower(_blank_to_null("channel")).alias("channel"),
+        F.upper(_blank_to_null("coupon_code")).alias("coupon_code"),
     ]
 
 
@@ -129,6 +142,7 @@ def _orders_rules() -> list[Rule]:
         *parseable("order_ts", "updated_at"),
         (_raw("status").isNotNull() & ~F.col("status").isin(*ORDER_STATUSES), "invalid_status"),
         (F.col("currency").isNotNull() & (F.length("currency") != 3), "invalid_currency"),
+        (F.col("channel").isNotNull() & ~F.col("channel").isin(*ORDER_CHANNELS), "invalid_channel"),
     ]
 
 
@@ -191,6 +205,7 @@ SPECS: dict[str, SilverSpec] = {
         columns=(
             "order_id STRING, customer_id STRING, order_ts TIMESTAMP, order_date DATE, "
             "status STRING, currency STRING, updated_at TIMESTAMP, "
+            "channel STRING, coupon_code STRING, "
             "_batch_id STRING, _processed_at TIMESTAMP"
         ),
         parse=_orders_parse,
@@ -200,6 +215,7 @@ SPECS: dict[str, SilverSpec] = {
         references=(
             Reference("customer_id", "silver.customers", "customer_id", "unknown_customer"),
         ),
+        optional_source_columns=("channel", "coupon_code"),
     ),
     "order_items": SilverSpec(
         entity="order_items",
