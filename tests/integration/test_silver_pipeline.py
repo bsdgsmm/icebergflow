@@ -132,7 +132,7 @@ def test_reprocessing_is_idempotent(spark, processed):
     before = {t: _table_rows(spark, t) for t in ("silver.orders", "silver.order_items")}
     quarantine_before = spark.table("silver.quarantine").count()
 
-    run_silver(spark)
+    run_silver(spark, full_refresh=True)
 
     assert {t: _table_rows(spark, t) for t in before} == before
     assert spark.table("silver.quarantine").count() == quarantine_before
