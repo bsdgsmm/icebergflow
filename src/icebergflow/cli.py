@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import logging
+import sys
 from collections.abc import Sequence
 from datetime import date
 from pathlib import Path
@@ -143,6 +144,23 @@ def _cmd_evolve_partition(args: argparse.Namespace, settings: Settings) -> int:
     return 0
 
 
+def _cmd_query(args: argparse.Namespace, settings: Settings) -> int:
+    from icebergflow.analytics.queries import get_query, list_queries
+
+    if args.list or not args.name:
+        for query in list_queries(settings.sql_dir):
+            sys.stdout.write(f"{query.name:<24} {query.question}\n")
+        return 0
+
+    from icebergflow.lakehouse.spark import create_spark_session
+
+    query = get_query(settings.sql_dir, args.name)
+    spark = create_spark_session(settings, "icebergflow-query")
+    sys.stdout.write(f"{query.question}\n")
+    spark.sql(query.sql).show(args.limit, truncate=False)
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="icebergflow", description=__doc__)
     commands = parser.add_subparsers(dest="command", required=True)
@@ -194,6 +212,12 @@ def build_parser() -> argparse.ArgumentParser:
     quality = commands.add_parser("quality", help="run data quality checks and show results")
     quality.add_argument("--suite", choices=["silver", "gold", "all"], default="all")
     quality.set_defaults(handler=_cmd_quality)
+
+    query = commands.add_parser("query", help="run an analytical query from sql/analytics")
+    query.add_argument("name", nargs="?", help="query name (omit to list queries)")
+    query.add_argument("--list", action="store_true", help="list available queries")
+    query.add_argument("--limit", type=int, default=50, help="maximum rows to display")
+    query.set_defaults(handler=_cmd_query)
 
     evolve = commands.add_parser(
         "evolve-partition", help="add a partition field to a table (metadata-only change)"
