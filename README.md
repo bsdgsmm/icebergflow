@@ -300,7 +300,7 @@ holds 43 orders, 171 order lines, 8 customer updates and 2 product updates.
 
 ```bash
 pytest tests/unit            # seconds
-pytest tests/integration     # starts one local Spark session; about 11 minutes on the benchmark laptop
+pytest tests/integration     # starts one local Spark session; about 13 minutes on the benchmark laptop
 pytest                       # everything
 ruff check . && ruff format --check .
 ```
