@@ -12,18 +12,27 @@ Per entity, in dependency order (customers, products, orders, order_items):
 5. ``MERGE INTO`` the Silver table. A matched row is only overwritten by a
    strictly newer version, so late re-deliveries of old events cannot roll
    state back and replaying the same input is a no-op.
+
+Incremental reads: each entity keeps a watermark (the last Bronze snapshot it
+processed) in ``ops.watermarks``. A run reads only rows appended between the
+watermark and the current Bronze snapshot via an Iceberg incremental append
+scan. If the watermark is missing, or Bronze no longer descends from it through
+appends only (rollback, delete, overwrite), the entity falls back to a full read
+of the current snapshot. Because steps 3 and 5 are idempotent, a crash between
+the merge and the watermark update only causes the same range to be re-read.
 """
 
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import TYPE_CHECKING
 
 from pyspark.sql import Window
 from pyspark.sql import functions as F
 
-from icebergflow.lakehouse.catalog import create_table
+from icebergflow.lakehouse.catalog import appended_since, create_table, current_snapshot_id
+from icebergflow.lakehouse.watermarks import get_watermark, set_watermark
 from icebergflow.transformations.silver_specs import (
     QUARANTINE_COLUMNS,
     QUARANTINE_TABLE,
@@ -47,6 +56,8 @@ class SilverResult:
     valid_rows: int
     quarantined_rows: int
     merged_rows: int
+    mode: str = "full"
+    source_snapshot_id: int | None = None
 
     @property
     def duplicates_removed(self) -> int:
@@ -175,11 +186,50 @@ def process_entity(spark: SparkSession, bronze: DataFrame, spec: SilverSpec) -> 
     return result
 
 
-def run_silver(spark: SparkSession, entities: list[str] | None = None) -> list[SilverResult]:
-    """Process the full Bronze history of each entity into Silver."""
+@dataclass(frozen=True)
+class BronzeChanges:
+    df: DataFrame | None
+    snapshot_id: int | None
+    mode: str
+
+
+def bronze_changes(spark: SparkSession, entity: str, full_refresh: bool = False) -> BronzeChanges:
+    """Rows of ``bronze.<entity>`` not yet processed into Silver."""
+    table = f"bronze.{entity}"
+    current = current_snapshot_id(spark, table)
+    if current is None:
+        return BronzeChanges(None, None, "empty")
+    last = None if full_refresh else get_watermark(spark, SPECS[entity].table, table)
+    if last == current:
+        return BronzeChanges(None, current, "up_to_date")
+
+    catalog = spark.conf.get("spark.sql.defaultCatalog")
+    reader = spark.read.format("iceberg")
+    if last is not None and appended_since(spark, table, last):
+        reader = reader.option("start-snapshot-id", str(last)).option(
+            "end-snapshot-id", str(current)
+        )
+        mode = "incremental"
+    else:
+        reader = reader.option("snapshot-id", str(current))
+        mode = "full"
+    return BronzeChanges(reader.load(f"{catalog}.{table}"), current, mode)
+
+
+def run_silver(
+    spark: SparkSession, entities: list[str] | None = None, full_refresh: bool = False
+) -> list[SilverResult]:
+    """Process unprocessed Bronze rows (or all of them with ``full_refresh``) into Silver."""
     ensure_silver_tables(spark)
     results = []
     for entity in entities or ENTITY_ORDER:
-        bronze = spark.table(f"bronze.{entity}")
-        results.append(process_entity(spark, bronze, SPECS[entity]))
+        spec = SPECS[entity]
+        changes = bronze_changes(spark, entity, full_refresh)
+        if changes.df is None:
+            logger.info("silver entity up to date", extra={"table": spec.table})
+            results.append(SilverResult(entity, 0, 0, 0, 0, changes.mode, changes.snapshot_id))
+            continue
+        result = process_entity(spark, changes.df, spec)
+        set_watermark(spark, spec.table, f"bronze.{entity}", changes.snapshot_id)
+        results.append(replace(result, mode=changes.mode, source_snapshot_id=changes.snapshot_id))
     return results
