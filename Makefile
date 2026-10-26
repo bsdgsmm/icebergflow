@@ -1,6 +1,6 @@
 PYTHON ?= python
 
-.PHONY: install lint format test test-unit
+.PHONY: install lint format test test-unit generate sample-data
 
 install:
 	$(PYTHON) -m pip install -e ".[dev]"
@@ -18,3 +18,9 @@ test:
 
 test-unit:
 	$(PYTHON) -m pytest tests/unit
+
+generate:
+	$(PYTHON) -m icebergflow generate --days 14 --schema-v2-from 2024-01-10
+
+sample-data:
+	$(PYTHON) -m icebergflow generate --output data/sample --days 3 --orders-per-day 40 		--customers 60 --products 24 --seed 42 --schema-v2-from 2024-01-03
