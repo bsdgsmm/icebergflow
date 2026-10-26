@@ -60,16 +60,25 @@ def spark(settings):
 LAYER_NAMESPACES = ("bronze", "silver", "gold", "ops")
 
 
-@pytest.fixture
-def lakehouse(spark, settings, tmp_path):
-    """Empty medallion namespaces plus a private raw directory for one test."""
+def _reset_lakehouse(spark, settings, raw_dir):
+    """Empty medallion namespaces plus a private raw directory."""
     for ns in LAYER_NAMESPACES:
         spark.sql(f"CREATE NAMESPACE IF NOT EXISTS {ns}")
         for row in spark.sql(f"SHOW TABLES IN {ns}").collect():
             spark.sql(f"DROP TABLE {ns}.{row.tableName} PURGE")
-    raw_dir = tmp_path / "raw"
     raw_dir.mkdir()
     return replace(settings, raw_dir=raw_dir)
+
+
+@pytest.fixture
+def lakehouse(spark, settings, tmp_path):
+    return _reset_lakehouse(spark, settings, tmp_path / "raw")
+
+
+@pytest.fixture(scope="module")
+def module_lakehouse(spark, settings, tmp_path_factory):
+    """Like ``lakehouse`` but shared by a module whose tests only read the result."""
+    return _reset_lakehouse(spark, settings, tmp_path_factory.mktemp("module") / "raw")
 
 
 @pytest.fixture
