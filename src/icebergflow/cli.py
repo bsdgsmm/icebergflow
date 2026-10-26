@@ -91,6 +91,16 @@ def _cmd_silver(args: argparse.Namespace, settings: Settings) -> int:
     return 0
 
 
+def _cmd_gold(args: argparse.Namespace, settings: Settings) -> int:
+    from icebergflow.lakehouse.spark import create_spark_session
+    from icebergflow.transformations.gold import run_gold
+
+    spark = create_spark_session(settings, "icebergflow-gold")
+    results = run_gold(spark, settings.sql_dir, args.model or None)
+    logger.info("gold build finished", extra={"models": len(results)})
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="icebergflow", description=__doc__)
     commands = parser.add_subparsers(dest="command", required=True)
@@ -121,6 +131,10 @@ def build_parser() -> argparse.ArgumentParser:
 
     silver = commands.add_parser("silver", help="validate and merge Bronze data into Silver")
     silver.set_defaults(handler=_cmd_silver)
+
+    gold = commands.add_parser("gold", help="rebuild Gold models from Silver")
+    gold.add_argument("--model", action="append", help="model name to build (repeatable)")
+    gold.set_defaults(handler=_cmd_gold)
 
     snaps = commands.add_parser("snapshots", help="show the snapshot history of a table")
     snaps.add_argument("table", help="table identifier, e.g. silver.orders")
