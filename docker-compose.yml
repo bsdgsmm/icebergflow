@@ -1,0 +1,17 @@
+services:
+  icebergflow:
+    build: .
+    image: icebergflow:local
+    environment:
+      ICEBERGFLOW_DRIVER_MEMORY: ${ICEBERGFLOW_DRIVER_MEMORY:-2g}
+      ICEBERGFLOW_LOG_FORMAT: ${ICEBERGFLOW_LOG_FORMAT:-text}
+    volumes:
+      - ./warehouse:/app/warehouse
+      - ./data/raw:/app/data/raw
+
+  tests:
+    build: .
+    image: icebergflow:local
+    entrypoint: ["python", "-m", "pytest"]
+    command: ["-q"]
+    profiles: ["test"]
