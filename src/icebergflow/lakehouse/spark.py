@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import sys
 from importlib import resources
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -58,6 +59,9 @@ def create_spark_session(settings: Settings, app_name: str = "icebergflow") -> S
 
     from pyspark.sql import SparkSession
 
+    # Python workers must run the same interpreter as the driver, not whatever
+    # `python` resolves to on PATH (on Windows that can be the Store stub).
+    os.environ.setdefault("PYSPARK_PYTHON", sys.executable)
     builder = SparkSession.builder.appName(app_name)
     for key, value in spark_conf(settings).items():
         builder = builder.config(key, value)
