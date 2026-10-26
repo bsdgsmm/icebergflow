@@ -1,6 +1,6 @@
 PYTHON ?= python
 
-.PHONY: install setup lint format test test-unit test-integration generate sample-data
+.PHONY: install setup lint format test test-unit test-integration generate sample-data ingest silver gold
 
 install:
 	$(PYTHON) -m pip install -e ".[dev]"
@@ -30,3 +30,12 @@ generate:
 
 sample-data:
 	$(PYTHON) -m icebergflow generate --output data/sample --days 3 --orders-per-day 40 		--customers 60 --products 24 --seed 42 --schema-v2-from 2024-01-03
+
+ingest:
+	$(PYTHON) -m icebergflow ingest
+
+silver:
+	$(PYTHON) -m icebergflow silver
+
+gold:
+	$(PYTHON) -m icebergflow gold

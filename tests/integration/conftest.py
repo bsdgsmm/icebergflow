@@ -43,6 +43,7 @@ def settings(tmp_path_factory) -> Settings:
         warehouse_dir=root / "warehouse",
         raw_dir=root / "raw",
         jars_dir=jars_dir,
+        sql_dir=base.sql_dir.resolve(),
         spark_master="local[2]",
         shuffle_partitions=2,
     )
