@@ -84,3 +84,28 @@ def current_snapshot_id(spark: SparkSession, identifier: str) -> int | None:
         f"ORDER BY made_current_at DESC LIMIT 1"
     ).first()
     return None if row is None else row.snapshot_id
+
+
+def current_lineage(spark: SparkSession, identifier: str) -> list[tuple[int, str]]:
+    """(snapshot_id, operation) of every ancestor of the current state, oldest first."""
+    rows = spark.sql(
+        f"SELECT h.snapshot_id, s.operation FROM {identifier}.history h "
+        f"JOIN {identifier}.snapshots s ON s.snapshot_id = h.snapshot_id "
+        f"WHERE h.is_current_ancestor ORDER BY h.made_current_at, h.snapshot_id"
+    ).collect()
+    return [(row.snapshot_id, row.operation) for row in rows]
+
+
+def appended_since(spark: SparkSession, identifier: str, snapshot_id: int) -> bool:
+    """True if the current state descends from ``snapshot_id`` through appends only.
+
+    That is the precondition for an incremental append scan: if the table was
+    rolled back past the snapshot, or rows were overwritten or deleted after it,
+    the rows between the two snapshots are not a simple set of new records.
+    """
+    lineage = current_lineage(spark, identifier)
+    ids = [snapshot for snapshot, _ in lineage]
+    if snapshot_id not in ids:
+        return False
+    later = lineage[ids.index(snapshot_id) + 1 :]
+    return all(operation == "append" for _, operation in later)

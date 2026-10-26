@@ -1,6 +1,6 @@
 PYTHON ?= python
 
-.PHONY: install setup lint format test test-unit test-integration generate sample-data ingest silver gold
+.PHONY: install setup lint format test test-unit test-integration generate sample-data ingest silver gold run full-refresh
 
 install:
 	$(PYTHON) -m pip install -e ".[dev]"
@@ -39,3 +39,9 @@ silver:
 
 gold:
 	$(PYTHON) -m icebergflow gold
+
+run:
+	$(PYTHON) -m icebergflow run
+
+full-refresh:
+	$(PYTHON) -m icebergflow run --full-refresh

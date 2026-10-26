@@ -80,7 +80,7 @@ def _cmd_silver(args: argparse.Namespace, settings: Settings) -> int:
     from icebergflow.transformations.silver import run_silver
 
     spark = create_spark_session(settings, "icebergflow-silver")
-    results = run_silver(spark)
+    results = run_silver(spark, full_refresh=args.full_refresh)
     logger.info(
         "silver processing finished",
         extra={
@@ -98,6 +98,15 @@ def _cmd_gold(args: argparse.Namespace, settings: Settings) -> int:
     spark = create_spark_session(settings, "icebergflow-gold")
     results = run_gold(spark, settings.sql_dir, args.model or None)
     logger.info("gold build finished", extra={"models": len(results)})
+    return 0
+
+
+def _cmd_run(args: argparse.Namespace, settings: Settings) -> int:
+    from icebergflow.lakehouse.spark import create_spark_session
+    from icebergflow.pipeline import run_pipeline
+
+    spark = create_spark_session(settings, "icebergflow-run")
+    run_pipeline(spark, settings, args.batch or None, full_refresh=args.full_refresh)
     return 0
 
 
@@ -130,11 +139,21 @@ def build_parser() -> argparse.ArgumentParser:
     ing.set_defaults(handler=_cmd_ingest)
 
     silver = commands.add_parser("silver", help="validate and merge Bronze data into Silver")
+    silver.add_argument(
+        "--full-refresh", action="store_true", help="ignore watermarks and reprocess all of Bronze"
+    )
     silver.set_defaults(handler=_cmd_silver)
 
     gold = commands.add_parser("gold", help="rebuild Gold models from Silver")
     gold.add_argument("--model", action="append", help="model name to build (repeatable)")
     gold.set_defaults(handler=_cmd_gold)
+
+    run = commands.add_parser("run", help="ingest new batches, then update Silver and Gold")
+    run.add_argument("--batch", action="append", help="batch id to load (repeatable)")
+    run.add_argument(
+        "--full-refresh", action="store_true", help="reprocess all of Bronze and rebuild Gold"
+    )
+    run.set_defaults(handler=_cmd_run)
 
     snaps = commands.add_parser("snapshots", help="show the snapshot history of a table")
     snaps.add_argument("table", help="table identifier, e.g. silver.orders")
