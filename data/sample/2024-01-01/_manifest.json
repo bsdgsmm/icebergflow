@@ -1,0 +1,30 @@
+{
+  "batch_id": "2024-01-01",
+  "schema_version": 1,
+  "row_counts": {
+    "customers": 60,
+    "products": 24,
+    "orders": 34,
+    "order_items": 62
+  },
+  "injected_anomalies": {
+    "order_items.null_price": 3
+  },
+  "duplicates": {
+    "orders": 2,
+    "order_items": 2,
+    "orders_resent": 0
+  },
+  "generator": {
+    "start_date": "2024-01-01",
+    "days": 3,
+    "orders_per_day": 40,
+    "initial_customers": 60,
+    "daily_new_customers": 12,
+    "products": 24,
+    "seed": 42,
+    "schema_v2_from": "2024-01-03",
+    "anomaly_rate": 0.02,
+    "duplicate_rate": 0.03
+  }
+}
