@@ -164,3 +164,13 @@ def test_gold_refresh_rewrites_only_affected_month(spark, raw):
         ).collect()
     } == jan_files
     assert _content(spark, "gold.daily_sales") == jan_rows
+
+
+def test_rerun_without_new_data_leaves_gold_untouched(spark, raw):
+    run_pipeline(spark, raw, BATCHES[:2])
+    commits = {t: len(snapshots(spark, t)) for t in TABLES[4:]}
+
+    result = run_pipeline(spark, raw, BATCHES[:2])
+
+    assert result.gold == []
+    assert {t: len(snapshots(spark, t)) for t in TABLES[4:]} == commits
