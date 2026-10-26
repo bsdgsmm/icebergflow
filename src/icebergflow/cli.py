@@ -49,10 +49,29 @@ def _cmd_snapshots(args: argparse.Namespace, settings: Settings) -> int:
     spark = create_spark_session(settings, "icebergflow-snapshots")
     spark.sql(
         f"SELECT committed_at, snapshot_id, parent_id, operation, "
+        f"summary['icebergflow.batch-id'] AS batch_id, "
         f"summary['added-records'] AS added_records, "
         f"summary['total-records'] AS total_records "
         f"FROM {args.table}.snapshots ORDER BY committed_at"
     ).show(args.limit, truncate=False)
+    return 0
+
+
+def _cmd_ingest(args: argparse.Namespace, settings: Settings) -> int:
+    from icebergflow.ingestion.bronze import ingest
+    from icebergflow.lakehouse.spark import create_spark_session
+
+    spark = create_spark_session(settings, "icebergflow-ingest")
+    results = ingest(spark, settings, args.batch or None)
+    ingested = [r for r in results if r.status == "ingested"]
+    logger.info(
+        "bronze ingestion finished",
+        extra={
+            "ingested": len(ingested),
+            "skipped": len(results) - len(ingested),
+            "rows": sum(r.rows for r in ingested),
+        },
+    )
     return 0
 
 
@@ -79,6 +98,10 @@ def build_parser() -> argparse.ArgumentParser:
         "setup", help="download the Iceberg runtime jar (and build the Windows shim)"
     )
     setup.set_defaults(handler=_cmd_setup)
+
+    ing = commands.add_parser("ingest", help="load raw source batches into Bronze tables")
+    ing.add_argument("--batch", action="append", help="batch id to load (repeatable; default: all)")
+    ing.set_defaults(handler=_cmd_ingest)
 
     snaps = commands.add_parser("snapshots", help="show the snapshot history of a table")
     snaps.add_argument("table", help="table identifier, e.g. silver.orders")
