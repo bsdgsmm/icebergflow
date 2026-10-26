@@ -1,6 +1,6 @@
 PYTHON ?= python
 
-.PHONY: install setup lint format test test-unit test-integration generate sample-data ingest silver gold run full-refresh benchmark docker-build docker-run docker-test
+.PHONY: install setup lint format test test-unit test-integration generate sample-data ingest silver gold run full-refresh benchmark charts docker-build docker-run docker-test
 
 install:
 	$(PYTHON) -m pip install -e ".[dev]"
@@ -59,3 +59,6 @@ docker-run:
 
 docker-test:
 	docker compose run --rm tests
+
+charts:
+	$(PYTHON) scripts/render_charts.py --output docs/screenshots/daily_revenue.png
