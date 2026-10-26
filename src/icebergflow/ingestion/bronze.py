@@ -5,6 +5,13 @@ later fail validation are still available for inspection. Each row carries
 lineage columns (``_batch_id``, ``_source_file``, ``_ingested_at``,
 ``_record_hash``).
 
+Schema evolution: a batch that carries new source columns adds them to the
+table (as STRING, after the existing source columns) before it is appended.
+Iceberg schema changes are metadata-only, so earlier files are not rewritten
+and read the new columns as NULL; snapshots taken before the change keep their
+original schema for time travel. Columns that disappear from a batch are
+stored as NULL. Column names must be lower snake case.
+
 Idempotency: each append commits the batch id as an Iceberg snapshot property
 (``icebergflow.batch-id``). Data and marker land in the same atomic commit, so
 a batch is either fully present with its marker or absent. Reruns skip batches
@@ -16,6 +23,7 @@ back the markers, so rolled-back batches are reloaded on the next run.
 from __future__ import annotations
 
 import logging
+import re
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
@@ -30,6 +38,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 NAMESPACE = "bronze"
+VALID_COLUMN_NAME = re.compile(r"^[a-z][a-z0-9_]*$")
 BATCH_PROPERTY = "icebergflow.batch-id"
 METADATA_COLUMNS = (
     ("_batch_id", "STRING"),
@@ -103,6 +112,23 @@ def read_source(spark: SparkSession, batch: SourceBatch, entity: SourceEntity) -
     )
 
 
+def evolve_schema(
+    spark: SparkSession, identifier: str, incoming: list[str], source_columns: list[str]
+) -> list[str]:
+    """Add incoming columns that the table does not have yet; returns the added names."""
+    new = [c for c in incoming if c not in source_columns and c != "_corrupt_record"]
+    invalid = sorted(c for c in new if not VALID_COLUMN_NAME.match(c))
+    if invalid:
+        raise SchemaDriftError(f"invalid source column names: {', '.join(invalid)}")
+    after = source_columns[-1]
+    for column in new:
+        spark.sql(f"ALTER TABLE {identifier} ADD COLUMN `{column}` STRING AFTER `{after}`")
+        after = column
+    if new:
+        logger.info("evolved table schema", extra={"table": identifier, "added": ",".join(new)})
+    return new
+
+
 def align_to_table(df: DataFrame, table_columns: list[str]) -> DataFrame:
     """Project ``df`` onto the table's source columns, filling absent ones with NULL."""
     from pyspark.sql import functions as F
@@ -152,9 +178,12 @@ def ingest_entity(
         )
         return IngestionResult(batch.batch_id, entity.name, "skipped", 0)
 
-    table_columns = [f.name for f in spark.table(identifier).schema.fields]
-    source_columns = [c for c in table_columns if not c.startswith("_")]
     raw = read_source(spark, batch, entity)
+    source_columns = [c for c in spark.table(identifier).columns if not c.startswith("_")]
+    if evolve_schema(spark, identifier, raw.columns, source_columns):
+        spark.catalog.refreshTable(identifier)
+    table_columns = spark.table(identifier).columns
+    source_columns = [c for c in table_columns if not c.startswith("_")]
     df = with_lineage(align_to_table(raw, source_columns), batch, entity).select(*table_columns)
 
     df = df.cache()

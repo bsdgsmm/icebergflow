@@ -59,7 +59,7 @@ def gold(spark, settings, lakehouse):
         "INSERT INTO silver.orders VALUES "
         + ", ".join(
             f"('{o}', '{c}', timestamp'{ts}', date'{ts[:10]}', '{status}', 'USD', "
-            f"timestamp'{ts}', {lineage})"
+            f"timestamp'{ts}', NULL, NULL, {lineage})"
             for o, c, ts, status in ORDERS
         )
     )
