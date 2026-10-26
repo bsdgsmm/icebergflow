@@ -19,6 +19,9 @@ dev = [
     "ruff==0.17.2",
 ]
 
+[project.scripts]
+icebergflow = "icebergflow.cli:main"
+
 [tool.setuptools.packages.find]
 where = ["src"]
 
@@ -29,7 +32,8 @@ src = ["src", "tests"]
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "B", "UP", "SIM", "PL", "RUF", "T20"]
-ignore = ["PLR0913", "PLR2004"]
+# Heavy imports (pyspark) are deferred inside CLI handlers on purpose.
+ignore = ["PLR0913", "PLR2004", "PLC0415"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
