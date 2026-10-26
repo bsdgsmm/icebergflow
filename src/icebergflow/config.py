@@ -15,6 +15,7 @@ class Settings:
     raw_dir: Path = Path("data/raw")
     warehouse_dir: Path = Path("warehouse")
     jars_dir: Path = Path("jars")
+    sql_dir: Path = Path("sql")
     catalog: str = "lakehouse"
     spark_master: str = "local[*]"
     driver_memory: str = "2g"
@@ -43,6 +44,7 @@ class Settings:
             raw_dir=Path(get("RAW_DIR", str(defaults.raw_dir))),
             warehouse_dir=Path(get("WAREHOUSE_DIR", str(defaults.warehouse_dir))),
             jars_dir=Path(get("JARS_DIR", str(defaults.jars_dir))),
+            sql_dir=Path(get("SQL_DIR", str(defaults.sql_dir))),
             catalog=get("CATALOG", defaults.catalog),
             spark_master=get("SPARK_MASTER", defaults.spark_master),
             driver_memory=get("DRIVER_MEMORY", defaults.driver_memory),
