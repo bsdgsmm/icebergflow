@@ -1,0 +1,36 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+build/
+dist/
+
+# Tooling caches
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Local environment
+.env
+
+# Runtime artifacts
+jars/
+warehouse/
+data/raw/
+data/benchmark/
+spark-warehouse/
+metastore_db/
+derby.log
+*.crc
+
+# Java build output
+java/**/classes/
+
+# Editors and OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
