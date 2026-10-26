@@ -35,6 +35,27 @@ def _cmd_generate(args: argparse.Namespace, settings: Settings) -> int:
     return 0
 
 
+def _cmd_setup(args: argparse.Namespace, settings: Settings) -> int:
+    from icebergflow.lakehouse.runtime import setup_runtime
+
+    jars = setup_runtime(settings.jars_dir)
+    logger.info("runtime ready", extra={"jars": ",".join(jar.name for jar in jars)})
+    return 0
+
+
+def _cmd_snapshots(args: argparse.Namespace, settings: Settings) -> int:
+    from icebergflow.lakehouse.spark import create_spark_session
+
+    spark = create_spark_session(settings, "icebergflow-snapshots")
+    spark.sql(
+        f"SELECT committed_at, snapshot_id, parent_id, operation, "
+        f"summary['added-records'] AS added_records, "
+        f"summary['total-records'] AS total_records "
+        f"FROM {args.table}.snapshots ORDER BY committed_at"
+    ).show(args.limit, truncate=False)
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="icebergflow", description=__doc__)
     commands = parser.add_subparsers(dest="command", required=True)
@@ -53,6 +74,16 @@ def build_parser() -> argparse.ArgumentParser:
         help="first batch date that carries the v2 order schema (channel, coupon_code)",
     )
     gen.set_defaults(handler=_cmd_generate)
+
+    setup = commands.add_parser(
+        "setup", help="download the Iceberg runtime jar (and build the Windows shim)"
+    )
+    setup.set_defaults(handler=_cmd_setup)
+
+    snaps = commands.add_parser("snapshots", help="show the snapshot history of a table")
+    snaps.add_argument("table", help="table identifier, e.g. silver.orders")
+    snaps.add_argument("--limit", type=int, default=50)
+    snaps.set_defaults(handler=_cmd_snapshots)
     return parser
 
 

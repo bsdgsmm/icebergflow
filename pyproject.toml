@@ -25,6 +25,9 @@ icebergflow = "icebergflow.cli:main"
 [tool.setuptools.packages.find]
 where = ["src"]
 
+[tool.setuptools.package-data]
+"icebergflow.lakehouse" = ["resources/*"]
+
 [tool.ruff]
 line-length = 100
 target-version = "py312"
