@@ -45,7 +45,7 @@ The project centers on the parts of data engineering that are easy to get wrong:
 | Language | Python 3.12, SQL |
 | Runtime | Java 17 (Spark 4.0 requires Java 17 or 21) |
 | Quality and tests | Pytest (unit and Spark/Iceberg integration tests), Ruff |
-| Packaging | `pyproject.toml`, Makefile, Dockerfile and Docker Compose |
+| Packaging | `pyproject.toml`, Makefile |
 | Charts | Matplotlib (optional, for benchmark and documentation charts) |
 
 ## Architecture
@@ -191,20 +191,6 @@ publish. IcebergFlow avoids it: on Windows, `icebergflow setup` compiles a small
 it for local files. No `HADOOP_HOME` is needed. Details are in
 [docs/architecture.md](docs/architecture.md#windows-support-without-winutilsexe). Everything in
 this repository, including tests and benchmarks, was developed and run on Windows 10 this way.
-
-### Docker
-
-```bash
-docker compose build
-docker compose run --rm icebergflow generate
-docker compose run --rm icebergflow run
-docker compose --profile test run --rm tests
-```
-
-The image (Python 3.12 slim, OpenJDK 17 JRE) fetches the Iceberg jar at build time and mounts
-`warehouse/` and `data/raw/` from the host. The container setup is provided for Linux-based
-environments, but it was not built on the development machine, which has no Docker installed.
-The native setup above is the verified path.
 
 ## Iceberg catalog
 
@@ -418,7 +404,7 @@ icebergflow/
 ├── scripts/render_charts.py    # documentation chart from Gold tables
 ├── data/sample/                # three committed sample batches
 ├── docs/                       # architecture, data model, dictionary, processing, performance
-├── Dockerfile, docker-compose.yml, Makefile, pyproject.toml
+├── Makefile, pyproject.toml
 ```
 
 ## Limitations and future work
@@ -435,7 +421,6 @@ icebergflow/
 * **No table maintenance yet.** Snapshot expiration, orphan-file cleanup and compaction
   (`expire_snapshots`, `remove_orphan_files`, `rewrite_data_files`) are not scheduled. The
   benchmark shows where compaction would pay off.
-* **Docker image not verified locally.** See [Docker](#docker).
 * **Bronze is append-only.** A corrected batch must be delivered under a new batch id.
 
 ## License
