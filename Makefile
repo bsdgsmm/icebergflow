@@ -1,6 +1,6 @@
 PYTHON ?= python
 
-.PHONY: install setup lint format test test-unit test-integration generate sample-data ingest silver gold run full-refresh
+.PHONY: install setup lint format test test-unit test-integration generate sample-data ingest silver gold run full-refresh benchmark
 
 install:
 	$(PYTHON) -m pip install -e ".[dev]"
@@ -45,3 +45,7 @@ run:
 
 full-refresh:
 	$(PYTHON) -m icebergflow run --full-refresh
+
+benchmark:
+	$(PYTHON) benchmarks/run_benchmarks.py
+	$(PYTHON) benchmarks/report.py --chart docs/screenshots/benchmark_layout.png
